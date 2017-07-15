@@ -21,6 +21,12 @@ namespace miditool
                 MidiFile workpiece = new MidiFile();
                 workpiece.loadMidiFromFile(args[0]);
 
+                if (al.checkFlag("trim"))
+                {
+                    Console.WriteLine("Removing redundant Events...");
+                    Filters.Trim(workpiece);
+                }
+
                 if (al.checkFlag("max-expr"))
                 {
                     Console.WriteLine("Maximizing Expression...");
@@ -66,6 +72,7 @@ namespace miditool
                     string s = args[i];
                     switch (s)
                     {
+                        case "--trim":
                         case "--max-expr":
                             break;
                         case "--map":
@@ -91,6 +98,10 @@ namespace miditool
                     string s = args[i];
                     switch (s)
                     {
+                        case "--trim":
+                            if (flag == "trim")
+                                return true;
+                            break;
                         case "--max-expr":
                             if (flag == "max-expr")
                                 return true;
@@ -118,6 +129,7 @@ namespace miditool
                     string s = args[i];
                     switch (s)
                     {
+                        case "trim":
                         case "--max-expr":
                             break;
                         case "--map":
@@ -147,14 +159,16 @@ namespace miditool
         {
             Console.Error.WriteLine("Usage: miditool <input.mid> <output.mid> [flags...]");
             Console.Error.WriteLine("Valid Flags: --max-expr");
-            Console.Error.WriteLine("                   ^~~~ Maximize the expression on each track but remain relative scale");
+            Console.Error.WriteLine("                  ^~~~ Maximize the expression on each track but remain relative scale");
+            Console.Error.WriteLine("             --trim");
+            Console.Error.WriteLine("                  ^~~~ Remove redundant Midi Events");
             Console.Error.WriteLine("             --map drum=127,imap=50:49,dmap=60:36,trans=50:-12");
-            Console.Error.WriteLine("                   ^~~~ MIDI prog 127 is a drum");
+            Console.Error.WriteLine("                  ^~~~ MIDI prog 127 is a drum");
             Console.Error.WriteLine("                        map prog 50 to prog 49");
             Console.Error.WriteLine("                        map drum key 60 to key 36");
             Console.Error.WriteLine("                        transpose prog 50 by -12 semi tones (-1 octave)");
             Console.Error.WriteLine("             --clear-ctrl 7");
-            Console.Error.WriteLine("                   ^~~~ Clear controller events of type 7 (volume)");
+            Console.Error.WriteLine("                  ^~~~ Clear controller events of type 7 (volume)");
             Environment.Exit(1);
         }
     }

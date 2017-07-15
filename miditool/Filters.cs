@@ -11,6 +11,9 @@ namespace miditool
     {
         public static void MaxExpr(MidiFile midi)
         {
+            /******************
+             *  maximizes expression to peak level
+             */
             // get expression multipliers
             foreach (MidiTrack trk in midi.midiTracks)
             {
@@ -55,6 +58,9 @@ namespace miditool
 
         public static void InstrMap(MidiFile midi, string mapping)
         {
+            /******************
+             *  maps instruments and drums using a map
+             */
             byte[] instrMap = new byte[128];
             sbyte[] transposeMap = new sbyte[128];
             byte[] drumMap = new byte[128];
@@ -164,6 +170,9 @@ namespace miditool
 
         public static void ClearCtrl(MidiFile midi, string types)
         {
+            /******************
+             *  removes controller events of the specified kind
+             */
             bool[] controllerMap = new bool[128];
             // parse types
             Console.WriteLine("types is " + types);
@@ -186,6 +195,84 @@ namespace miditool
                     (x as MessageMidiEvent).type == NormalType.Controller
                     && controllerMap[(x as MessageMidiEvent).parameter1]);
             }
+        }
+
+        public static void Trim(MidiFile midi)
+        {
+            /******************
+             *  removes empty tracks and redundant controller/voice events
+             */
+            midi.midiTracks.RemoveAll(TrackIsOmitable);
+            foreach (MidiTrack tr in midi.midiTracks)
+            {
+                // int array for storing the last set values of the controller values
+                int[] controllerValues = new int[128];
+                for (int i = 0; i < controllerValues.Length; i++)
+                    controllerValues[i] = -1;
+                int lastVoice = -1;
+                int lastPitchBendA = -1;
+                int lastPitchBendB = -1;
+                for (int i = 0; i < tr.midiEvents.Count;)
+                {
+                    if (tr.midiEvents[i] is MessageMidiEvent)
+                    {
+                        MessageMidiEvent mev = tr.midiEvents[i] as MessageMidiEvent;
+                        if (mev.type == NormalType.Program)
+                        {
+                            if (mev.parameter1 == lastVoice)
+                            {
+                                tr.midiEvents.RemoveAt(i);
+                                continue;
+                            }
+                            lastVoice = mev.parameter1;
+                        }
+                        else if (mev.type == NormalType.PitchBend)
+                        {
+                            if (mev.parameter1 == lastPitchBendA && mev.parameter2 == lastPitchBendB)
+                            {
+                                tr.midiEvents.RemoveAt(i);
+                                continue;
+                            }
+                            lastPitchBendA = mev.parameter1;
+                            lastPitchBendB = mev.parameter2;
+                        }
+                        else if (mev.type == NormalType.Controller)
+                        {
+                            if (controllerValues[mev.parameter1] == mev.parameter2)
+                            {
+                                tr.midiEvents.RemoveAt(i);
+                                continue;
+                            }
+                            controllerValues[mev.parameter1] = mev.parameter2;
+                        }
+                    }
+                    // only count up if the current event didn't get deleted
+                    i++;
+                }
+            }
+        }
+
+        // util functions
+        private static bool TrackIsOmitable(MidiTrack tr)
+        {
+            foreach (MidiEvent ev in tr.midiEvents)
+            {
+                if (ev is MetaMidiEvent)
+                {
+                    MetaMidiEvent mev = ev as MetaMidiEvent;
+                    if (mev.getMetaType() == MetaType.TempoSetting)
+                        return false;
+                }
+                else if (ev is MessageMidiEvent)
+                {
+                    MessageMidiEvent mev = ev as MessageMidiEvent;
+                    if (mev.type == NormalType.NoteON)
+                        return false;
+                    if (mev.type == NormalType.NoteOFF)
+                        return false;
+                }
+            }
+            return true;
         }
     }
 }
