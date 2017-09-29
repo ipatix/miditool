@@ -27,16 +27,16 @@ namespace miditool
                     Filters.Trim(workpiece);
                 }
 
-                if (al.checkFlag("max-expr"))
-                {
-                    Console.WriteLine("Maximizing Expression...");
-                    Filters.MaxExpr(workpiece);
-                }
-
                 if (al.checkFlag("clear-ctrl"))
                 {
                     Console.WriteLine("Clearing Controller Events");
                     Filters.ClearCtrl(workpiece, al.getOption("clear-ctrl"));
+                }
+
+                if (al.checkFlag("maximize"))
+                {
+                    Console.WriteLine("Maximizing Volume and Velocity");
+                    Filters.Maximize(workpiece);
                 }
 
                 if (al.checkFlag("map"))
@@ -73,7 +73,7 @@ namespace miditool
                     switch (s)
                     {
                         case "--trim":
-                        case "--max-expr":
+                        case "--maximize":
                             break;
                         case "--map":
                             if (i + 1 >= args.Length)
@@ -102,12 +102,17 @@ namespace miditool
                             if (flag == "trim")
                                 return true;
                             break;
-                        case "--max-expr":
-                            if (flag == "max-expr")
+                        case "--maximize":
+                            if (flag == "maximize")
                                 return true;
                             break;
                         case "--map":
                             if (flag == "map")
+                                return true;
+                            i++;
+                            break;
+                        case "--map-track-name":
+                            if (flag == "map-track-name")
                                 return true;
                             i++;
                             break;
@@ -130,15 +135,12 @@ namespace miditool
                     switch (s)
                     {
                         case "trim":
-                        case "--max-expr":
+                        case "--maximize":
                             break;
                         case "--map":
-                            if (option == "map")
-                                return args[i+1];
-                            i++;
-                            break;
+                        case "--map-track-name":
                         case "--clear-ctrl":
-                            if (option == "clear-ctrl")
+                            if (option == "map" || option == "map-track-name" || option == "clear-ctrl")
                                 return args[i+1];
                             i++;
                             break;
@@ -158,8 +160,8 @@ namespace miditool
         static void Error()
         {
             Console.Error.WriteLine("Usage: miditool <input.mid> <output.mid> [flags...]");
-            Console.Error.WriteLine("Valid Flags: --max-expr");
-            Console.Error.WriteLine("                  ^~~~ Maximize the expression on each track but remain relative scale");
+            Console.Error.WriteLine("Valid Flags: --maximize");
+            Console.Error.WriteLine("                  ^~~~ Maximize the volumes on each track but remain relative scale");
             Console.Error.WriteLine("             --trim");
             Console.Error.WriteLine("                  ^~~~ Remove redundant Midi Events");
             Console.Error.WriteLine("             --map drum=127,imap=50:49,dmap=60:36,trans=50:-12");

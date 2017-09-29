@@ -9,47 +9,72 @@ namespace miditool
 {
     static class Filters
     {
-        public static void MaxExpr(MidiFile midi)
+        public static void Maximize(MidiFile midi)
         {
             /******************
              *  maximizes expression to peak level
              */
             // get expression multipliers
+
+            int expPeak = -1;
+            int volPeak = -1;
+            int velPeak = -1;
+
             foreach (MidiTrack trk in midi.midiTracks)
             {
-                int maxlevel = -1;
                 foreach (MidiEvent ev in trk.midiEvents)
                 {
                     if (ev is MessageMidiEvent)
                     {
                         MessageMidiEvent mev = ev as MessageMidiEvent;
-                        // if controller is expression
-                        if (mev.type == NormalType.Controller && mev.parameter1 == 11)
+                        if (mev.type == NormalType.Controller && mev.parameter1 == 11 && mev.parameter2 > 0)
                         {
-                            maxlevel = Math.Max(maxlevel, mev.parameter2);
+                            expPeak = Math.Max(expPeak, mev.parameter2);
+                        }
+                        else if (mev.type == NormalType.Controller && mev.parameter1 == 7 && mev.parameter2 > 0)
+                        {
+                            volPeak = Math.Max(volPeak, mev.parameter2);
+                        }
+                        else if (mev.type == NormalType.NoteON && mev.parameter2 > 0)
+                        {
+                            velPeak = Math.Max(velPeak, mev.parameter2);
                         }
                     }
                 }
-                if (maxlevel <= 0)
-                    continue;
-                
-                double multiplier = 127.0f / maxlevel;
+            }
 
+            // update levels
+
+            foreach (MidiTrack trk in midi.midiTracks)
+            {
                 foreach (MidiEvent ev in trk.midiEvents)
                 {
                     if (ev is MessageMidiEvent)
                     {
                         MessageMidiEvent mev = ev as MessageMidiEvent;
-
-                        // boost expression
                         if (mev.type == NormalType.Controller && mev.parameter1 == 11)
                         {
-                            mev.parameter2 = (byte)Math.Max(0, Math.Min(127, Math.Round((double)mev.parameter2 * multiplier, MidpointRounding.AwayFromZero)));
+                            double newval = 127.0 / expPeak * mev.parameter2;
+                            newval = Math.Round(newval, MidpointRounding.AwayFromZero);
+                            newval = Math.Min(127.0, newval);
+                            newval = Math.Max(0.0, newval);
+                            mev.parameter2 = (byte)newval;
                         }
-                        // attenuate volume by the same degree
                         else if (mev.type == NormalType.Controller && mev.parameter1 == 7)
                         {
-                            mev.parameter2 = (byte)Math.Max(0, Math.Min(127, Math.Round((double)mev.parameter2 / multiplier, MidpointRounding.AwayFromZero)));
+                            double newval = 127.0 / volPeak * mev.parameter2;
+                            newval = Math.Round(newval, MidpointRounding.AwayFromZero);
+                            newval = Math.Min(127.0, newval);
+                            newval = Math.Max(0.0, newval);
+                            mev.parameter2 = (byte)newval;
+                        }
+                        else if (mev.type == NormalType.NoteON && mev.parameter2 > 0)
+                        {
+                            double newval = 127.0 / velPeak * mev.parameter2;
+                            newval = Math.Round(newval, MidpointRounding.AwayFromZero);
+                            newval = Math.Min(127.0, newval);
+                            newval = Math.Max(0.0, newval);
+                            mev.parameter2 = (byte)newval;
                         }
                     }
                 }
