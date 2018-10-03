@@ -21,6 +21,12 @@ namespace miditool
                 MidiFile workpiece = new MidiFile();
                 workpiece.loadMidiFromFile(args[0]);
 
+                if (al.checkFlag("quantize-bpm"))
+                {
+                    Console.WriteLine("Quantizing Tempo Events");
+                    Filters.QuantizeTempo(workpiece);
+                }
+
                 if (al.checkFlag("trim"))
                 {
                     Console.WriteLine("Removing redundant Events...");
@@ -72,6 +78,7 @@ namespace miditool
                     string s = args[i];
                     switch (s)
                     {
+                        case "--quantize-bpm":
                         case "--trim":
                         case "--maximize":
                             break;
@@ -98,6 +105,10 @@ namespace miditool
                     string s = args[i];
                     switch (s)
                     {
+                        case "--quantize-bpm":
+                            if (flag == "quantize-bpm")
+                                return true;
+                            break;
                         case "--trim":
                             if (flag == "trim")
                                 return true;
@@ -108,11 +119,6 @@ namespace miditool
                             break;
                         case "--map":
                             if (flag == "map")
-                                return true;
-                            i++;
-                            break;
-                        case "--map-track-name":
-                            if (flag == "map-track-name")
                                 return true;
                             i++;
                             break;
@@ -134,13 +140,13 @@ namespace miditool
                     string s = args[i];
                     switch (s)
                     {
-                        case "trim":
+                        case "--trim":
                         case "--maximize":
+                        case "--quantize-bpm":
                             break;
                         case "--map":
-                        case "--map-track-name":
                         case "--clear-ctrl":
-                            if (option == "map" || option == "map-track-name" || option == "clear-ctrl")
+                            if (option == "map" || option == "clear-ctrl")
                                 return args[i+1];
                             i++;
                             break;
@@ -171,6 +177,8 @@ namespace miditool
             Console.Error.WriteLine("                        transpose prog 50 by -12 semi tones (-1 octave)");
             Console.Error.WriteLine("             --clear-ctrl 7");
             Console.Error.WriteLine("                  ^~~~ Clear controller events of type 7 (volume)");
+            Console.Error.WriteLine("             --quantize-bpm");
+            Console.Error.WriteLine("                  ^~~~ Round BPM tempo values to nearest integer");
             Environment.Exit(1);
         }
     }

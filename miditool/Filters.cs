@@ -3,12 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using csmidi;
 
 namespace miditool
 {
     static class Filters
     {
+        private static double CalcBPM(int usPerBeat)
+        {
+            return (60.0 * 1000000.0) / usPerBeat;
+        }
+
+        private static int CalcUsPerBeat(double bpm)
+        {
+            return (int)Math.Round((60.0 * 1000000.0) / bpm, MidpointRounding.AwayFromZero);
+        }
+
         public static void Maximize(MidiFile midi)
         {
             /******************
@@ -87,8 +98,12 @@ namespace miditool
              *  maps instruments and drums using a map
              */
             byte[] instrMap = new byte[128];
+            for (int i = 0; i < instrMap.Length; i++)
+                instrMap[i] = (byte)i;
             sbyte[] transposeMap = new sbyte[128];
             byte[] drumMap = new byte[128];
+            for (int i = 0; i < drumMap.Length; i++)
+                drumMap[i] = (byte)i;
             bool[] isDrum = new bool[128];
 
             // parse mapping string
@@ -193,6 +208,39 @@ namespace miditool
             }
         }
 
+        public static void QuantizeTempo(MidiFile midi)
+        {
+            /******************
+             * Rounds Tempo Events to the nearest BPM integer
+             */
+            foreach (MidiTrack trk in midi.midiTracks)
+            {
+                for (int i = 0; i < trk.midiEvents.Count; i++)
+                {
+                    MidiEvent ev = trk.midiEvents[i];
+                    if (ev is MetaMidiEvent)
+                    {
+                        MetaMidiEvent mev = ev as MetaMidiEvent;
+                        if (mev.getMetaType() == MetaType.TempoSetting)
+                        {
+                            byte[] tempoBytes = mev.getEventData();
+                            Debug.Assert(tempoBytes.Length == 6);
+                            int us = (tempoBytes[3] << 16) | (tempoBytes[4] << 8) | tempoBytes[5];
+                            double bpm = CalcBPM(us);
+                            double ibpm = Math.Round(bpm, MidpointRounding.AwayFromZero);
+                            int ius = CalcUsPerBeat(ibpm);
+                            byte[] newTempoBytes = new byte[3];
+                            newTempoBytes[0] = (byte)(ius >> 16);
+                            newTempoBytes[1] = (byte)((ius >> 8) & 0xFF);
+                            newTempoBytes[2] = (byte)(ius & 0xFF);
+                            MetaMidiEvent newTempoEvent = new MetaMidiEvent(mev.absoluteTicks, 0x51, newTempoBytes);
+                            trk.midiEvents[i] = newTempoEvent;
+                        }
+                    }
+                }
+            }
+        }
+
         public static void ClearCtrl(MidiFile midi, string types)
         {
             /******************
@@ -237,6 +285,8 @@ namespace miditool
                 int lastVoice = -1;
                 int lastPitchBendA = -1;
                 int lastPitchBendB = -1;
+                int lastTempo = -1;
+
                 for (int i = 0; i < tr.midiEvents.Count;)
                 {
                     if (tr.midiEvents[i] is MessageMidiEvent)
@@ -269,6 +319,23 @@ namespace miditool
                                 continue;
                             }
                             controllerValues[mev.parameter1] = mev.parameter2;
+                        }
+                    }
+                    else if (tr.midiEvents[i] is MetaMidiEvent)
+                    {
+                        MetaMidiEvent mev = tr.midiEvents[i] as MetaMidiEvent;
+                        if (mev.getMetaType() == MetaType.TempoSetting)
+                        {
+                            byte[] tempoBytes = mev.getEventData();
+                            Debug.Assert(tempoBytes.Length == 6);
+                            int us = (tempoBytes[3] << 16) | (tempoBytes[4] << 8) | tempoBytes[5];
+                            
+                            if (lastTempo == us)
+                            {
+                                tr.midiEvents.RemoveAt(i);
+                                continue;
+                            }
+                            lastTempo = us;
                         }
                     }
                     // only count up if the current event didn't get deleted
