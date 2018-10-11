@@ -354,6 +354,10 @@ namespace miditool
                     MetaMidiEvent mev = ev as MetaMidiEvent;
                     if (mev.getMetaType() == MetaType.TempoSetting)
                         return false;
+                    else if (mev.getMetaType() == MetaType.TimeSignature)
+                        return false;
+                    else if (mev.getMetaType() == MetaType.MarkerText)
+                        return false;
                 }
                 else if (ev is MessageMidiEvent)
                 {
