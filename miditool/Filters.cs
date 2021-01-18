@@ -20,6 +20,89 @@ namespace miditool
             return (int)Math.Round((60.0 * 1000000.0) / bpm, MidpointRounding.AwayFromZero);
         }
 
+        public static void FullMaximize(MidiFile midi)
+        {
+            /******************
+             *  maximizes expression to peak level
+             */
+            // get expression multipliers
+
+            int[] expPeak = new int[midi.midiTracks.Count];
+            int[] volPeak = new int[midi.midiTracks.Count];
+            int[] velPeak = new int[midi.midiTracks.Count];
+
+            for (int i = 0; i < midi.midiTracks.Count; i++)
+            {
+                expPeak[i] = -1;
+                volPeak[i] = -1;
+                velPeak[i] = -1;
+            }
+
+            int itrk = 0;
+            foreach (MidiTrack trk in midi.midiTracks)
+            {
+                foreach (MidiEvent ev in trk.midiEvents)
+                {
+                    if (ev is MessageMidiEvent)
+                    {
+                        MessageMidiEvent mev = ev as MessageMidiEvent;
+                        if (mev.type == NormalType.Controller && mev.parameter1 == 11 && mev.parameter2 > 0)
+                        {
+                            expPeak[itrk] = Math.Max(expPeak[itrk], mev.parameter2);
+                        }
+                        else if (mev.type == NormalType.Controller && mev.parameter1 == 7 && mev.parameter2 > 0)
+                        {
+                            volPeak[itrk] = Math.Max(volPeak[itrk], mev.parameter2);
+                        }
+                        else if (mev.type == NormalType.NoteON && mev.parameter2 > 0)
+                        {
+                            velPeak[itrk] = Math.Max(velPeak[itrk], mev.parameter2);
+                        }
+                    }
+                }
+                itrk++;
+            }
+
+            // update levels
+
+            itrk = 0;
+            foreach (MidiTrack trk in midi.midiTracks)
+            {
+                foreach (MidiEvent ev in trk.midiEvents)
+                {
+                    if (ev is MessageMidiEvent)
+                    {
+                        MessageMidiEvent mev = ev as MessageMidiEvent;
+                        if (mev.type == NormalType.Controller && mev.parameter1 == 11)
+                        {
+                            double newval = 127.0 / expPeak[itrk] * mev.parameter2;
+                            newval = Math.Round(newval, MidpointRounding.AwayFromZero);
+                            newval = Math.Min(127.0, newval);
+                            newval = Math.Max(0.0, newval);
+                            mev.parameter2 = (byte)newval;
+                        }
+                        else if (mev.type == NormalType.Controller && mev.parameter1 == 7)
+                        {
+                            double newval = 127.0 / volPeak[itrk] * mev.parameter2;
+                            newval = Math.Round(newval, MidpointRounding.AwayFromZero);
+                            newval = Math.Min(127.0, newval);
+                            newval = Math.Max(0.0, newval);
+                            mev.parameter2 = (byte)newval;
+                        }
+                        else if (mev.type == NormalType.NoteON && mev.parameter2 > 0)
+                        {
+                            double newval = 127.0 / velPeak[itrk] * mev.parameter2;
+                            newval = Math.Round(newval, MidpointRounding.AwayFromZero);
+                            newval = Math.Min(127.0, newval);
+                            newval = Math.Max(0.0, newval);
+                            mev.parameter2 = (byte)newval;
+                        }
+                    }
+                }
+                itrk++;
+            }
+        }
+
         public static void Maximize(MidiFile midi)
         {
             /******************

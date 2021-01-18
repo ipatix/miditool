@@ -39,7 +39,12 @@ namespace miditool
                     Filters.ClearCtrl(workpiece, al.getOption("clear-ctrl"));
                 }
 
-                if (al.checkFlag("maximize"))
+                if (al.checkFlag("full-maximize"))
+                {
+                    Console.WriteLine("Fully maximizing Volume and Velocity");
+                    Filters.FullMaximize(workpiece);
+                }
+                else if (al.checkFlag("maximize"))
                 {
                     Console.WriteLine("Maximizing Volume and Velocity");
                     Filters.Maximize(workpiece);
@@ -80,6 +85,7 @@ namespace miditool
                     {
                         case "--quantize-bpm":
                         case "--trim":
+                        case "--full-maximize":
                         case "--maximize":
                             break;
                         case "--map":
@@ -117,6 +123,10 @@ namespace miditool
                             if (flag == "maximize")
                                 return true;
                             break;
+                        case "--full-maximize":
+                            if (flag == "full-maximize")
+                                return true;
+                            break;
                         case "--map":
                             if (flag == "map")
                                 return true;
@@ -142,6 +152,7 @@ namespace miditool
                     {
                         case "--trim":
                         case "--maximize":
+                        case "--full-maximize":
                         case "--quantize-bpm":
                             break;
                         case "--map":
@@ -168,6 +179,8 @@ namespace miditool
             Console.Error.WriteLine("Usage: miditool <input.mid> <output.mid> [flags...]");
             Console.Error.WriteLine("Valid Flags: --maximize");
             Console.Error.WriteLine("                  ^~~~ Maximize the volumes on each track but remain relative scale");
+            Console.Error.WriteLine("             --full-maximize");
+            Console.Error.WriteLine("                  ^~~~ Maximize the volume levels regardless of track balance");
             Console.Error.WriteLine("             --trim");
             Console.Error.WriteLine("                  ^~~~ Remove redundant Midi Events");
             Console.Error.WriteLine("             --map drum=127,imap=50:49,dmap=60:36,trans=50:-12");
