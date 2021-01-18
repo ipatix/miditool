@@ -1,4 +1,11 @@
 # miditool
+
+## DISCLAIMER
+
+This tool is no longer maintained as well as csmidi.
+
+## Overview
+
 MIDI Batch Processing Tool
 
 I created this tool in order to batch process MIDI files for things like the following:
